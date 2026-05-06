@@ -113,8 +113,30 @@ def copy_button(text: str, label: str = "Copy") -> ui.element:
 # ---------------------------------------------------------------------------
 
 
+def _apply_dark_class(is_dark: bool) -> None:
+    """Flip body--dark on body, then trigger the global JS theming pass that
+    sets inline background-color !important on every card/header/drawer.
+    Inline styles win against Tailwind's bg-white regardless of specificity.
+    """
+    flag = "true" if is_dark else "false"
+    ui.run_javascript(f"""
+    (function() {{
+      var apply = function() {{
+        if (!document.body) return;
+        document.body.classList.toggle('body--dark', {flag});
+        document.body.classList.toggle('body--light', !{flag});
+        document.documentElement.classList.toggle('dark', {flag});
+        if (window.__vamosApplyTheme) window.__vamosApplyTheme();
+      }};
+      if (document.body) apply();
+      else document.addEventListener('DOMContentLoaded', apply);
+    }})();
+    """)
+
+
 NAV_LINKS = [
-    ("/", "My day", "wb_sunny"),
+    ("/", "Home", "home"),
+    ("/my-day", "My day", "wb_sunny"),
     ("/inbox", "Inbox", "inbox"),
     ("/team-status", "Team status", "groups"),
     ("/pr-queue", "PR queue", "rate_review"),
@@ -129,8 +151,12 @@ def render_shell(active_route: str = "/") -> None:
     from . import state as state_mod
     from vamos.core import boards as boards_mod
 
-    # Apply dark mode before any other elements render
-    dark = ui.dark_mode(value=state_mod.get_dark_mode())
+    # Apply dark mode. We toggle Quasar's body--dark class explicitly via JS
+    # because ui.dark_mode().enable()/disable() doesn't reliably flip it in
+    # NiceGUI 2.x — and that class is what every CSS rule in main.py keys off.
+    is_dark = state_mod.get_dark_mode()
+    dark = ui.dark_mode(value=is_dark)
+    _apply_dark_class(is_dark)
 
     # --- Header ---
     with ui.header(elevated=False).classes(
@@ -171,11 +197,16 @@ def render_shell(active_route: str = "/") -> None:
             board_select.on("update:model-value",
                             lambda e: state_mod.set_board(e.args or None))
 
-            # Dark-mode toggle
+            # Dark-mode toggle — flips body--dark on body via JS so our CSS
+            # rules in main.py (which key off body--dark) actually fire.
             def toggle_dark():
-                new_val = not dark.value
-                dark.value = new_val
+                new_val = not state_mod.get_dark_mode()
                 state_mod.set_dark_mode(new_val)
+                if new_val:
+                    dark.enable()
+                else:
+                    dark.disable()
+                _apply_dark_class(new_val)
             ui.button(icon="dark_mode", on_click=toggle_dark).props("flat round").classes(
                 "text-slate-600 dark:text-slate-300"
             )

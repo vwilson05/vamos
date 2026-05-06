@@ -63,3 +63,4 @@ node_modules/
 # --- Distribution artifacts (we ship these out-of-band) ---
 vamos.zip
 *.zip
+.nicegui/

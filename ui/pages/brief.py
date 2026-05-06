@@ -30,10 +30,14 @@ def brief_page():
             # =========================================================
             with ui.tab_panel(tab_oneonone):
                 with ui.row().classes("w-full items-end gap-3"):
-                    engineer_input = ui.input(
+                    # Searchable select — empty until "Load engineer list" populates it.
+                    # with_input=True lets the user type a name even before loading.
+                    engineer_input = ui.select(
+                        options=[],
                         label="Engineer name or email",
-                        placeholder="Victor Wilson",
-                    ).props("outlined dense").classes("flex-1 min-w-64")
+                        with_input=True,
+                        new_value_mode="add-unique",
+                    ).props("outlined dense use-input hide-selected fill-input").classes("flex-1 min-w-64")
                     weeks = ui.number("Weeks", value=1, min=1, max=12).props(
                         "outlined dense"
                     ).classes("w-32")
@@ -47,9 +51,9 @@ def brief_page():
                         engineers = await run_with_logs(
                             "Loading engineer list", brief_mod.list_engineers, cfg,
                         )
-                        ui.notify(f"{len(engineers)} engineer(s) loaded", color="positive")
-                        engineer_input._props["suggestions"] = engineers
+                        engineer_input.options = engineers
                         engineer_input.update()
+                        ui.notify(f"{len(engineers)} engineer(s) loaded", color="positive")
                     except Exception as exc:
                         ui.notify(f"List failed: {exc}", color="negative")
                 load_btn.on("click", do_load_engineers)

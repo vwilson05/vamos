@@ -52,10 +52,12 @@ def _render_env_editor():
 
             schema = settings_mod.schema_by_section()
             for section, fields in schema.items():
-                with ui.expansion(section, icon="folder").classes(
+                with ui.expansion(
+                    section,
+                    icon="folder",
+                    value=section in ("ADO connection", "Channels"),
+                ).classes(
                     "w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg my-1"
-                ).bind_value(ui.context.client.user_data, f"exp_{section}", forward=lambda x: x).props(
-                    f"default-opened={'true' if section in ('ADO connection', 'Channels') else 'false'}"
                 ):
                     for fd in fields:
                         stored = current.get(fd.key, "")
@@ -63,7 +65,8 @@ def _render_env_editor():
                             val = stored.strip().lower() in ("1", "true", "yes")
                             cb = ui.checkbox(fd.label, value=val)
                             if fd.help:
-                                ui.tooltip(fd.help).set_target(cb)
+                                with cb:
+                                    ui.tooltip(fd.help)
                             cb.on("update:model-value",
                                   lambda e, k=fd.key: edits.update({k: "true" if e.args else "false"}))
                         elif fd.kind == "int":
