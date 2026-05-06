@@ -1,0 +1,17 @@
+# vamos routing rules.
+# Copy to routing.yml (gitignored) to enable.
+#
+# Maps PR authors to the buddy who must be a reviewer before the PR
+# goes to senior reviewers. Used by `vamos review-queue` to flag
+# PRs where the buddy was skipped.
+#
+# Format A — flat dict (author -> buddy display name):
+buddies:
+  Lakshmi Padmaja Kattamuri: Diego Carvajal
+  Padmaja Kattamuri-Admin: Diego Carvajal
+  # Add one row per author. Email or canonical display name both work.
+
+# Format B — list of {author, buddy} entries (equivalent):
+# buddies:
+#   - { author: "Lakshmi Padmaja Kattamuri", buddy: "Diego Carvajal" }
+#   - { author: "lakshmi.padmaja@halomd.com", buddy: "Diego Carvajal" }

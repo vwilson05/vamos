@@ -1,0 +1,99 @@
+# ADO Metrics Configuration
+# All commands run in DRY-RUN mode by default for safety
+
+boards:
+  - name: "Ingestion Engineering"
+    area_path: "Data Platform\\Engineering"
+    iteration_path: "Data Platform\\Ingestion Engineering Kanban"
+
+  - name: "Platform Core"
+    area_path: "Data Platform\\Core"
+    iteration_path: "Data Platform\\Core Team Sprint"
+
+  - name: "DevOps"
+    area_path: "Data Platform\\DevOps"
+    iteration_path: "Data Platform\\DevOps\\Sprint"
+
+default_board: "Ingestion Engineering"
+
+metrics:
+  # Safety settings
+  always_dry_run: true         # Always dry-run unless explicitly overridden with --send
+  require_confirmation: true   # Require confirmation for any external action
+
+  # Performance settings
+  performance:
+    velocity_calculation: "story-points"
+    include_subtasks: true
+    blocked_states: ["Blocked", "On Hold", "Waiting"]
+    completed_states: ["Done", "Closed", "Resolved"]
+
+  # Work item types to track
+  work_item_types:
+    - "User Story"
+    - "Bug"
+    - "Task"
+    - "Feature"
+
+  # Report settings
+  reports:
+    output_directory: "./reports"
+    template: "modern"
+    include_charts: true
+    include_trends: true
+    include_achievements: true
+
+  # Cache settings
+  cache:
+    enabled: true
+    ttl: 3600  # 1 hour in seconds
+    directory: "./.ado-cache"
+
+# Notifications - DISABLED by default
+notifications:
+  enabled: false               # Must explicitly enable with --send flag
+  test_mode: true             # Even when enabled, start in test mode
+
+  slack:
+    webhook_url: "${SLACK_WEBHOOK_URL}"
+    default_channel: "#dev-metrics"
+    format: "blocks"           # blocks or text
+    include_charts: true
+
+  teams:
+    webhook_url: "${TEAMS_WEBHOOK_URL}"
+    default_channel: "Development"
+    format: "adaptive-card"
+
+  email:
+    enabled: false
+    smtp_server: "${SMTP_SERVER}"
+    from: "ado-metrics@company.com"
+    default_recipients:
+      - "team-lead@company.com"
+
+# Developer mappings (optional)
+developers:
+  - unique_name: "john.doe@company.com"
+    display_name: "John Doe"
+    area_path: "Data Platform\\Engineering"
+
+  - unique_name: "jane.smith@company.com"
+    display_name: "Jane Smith"
+    area_path: "Data Platform\\Engineering"
+
+# Scheduling (optional, requires explicit setup)
+schedules:
+  weekly_report:
+    enabled: false
+    cron: "0 9 * * MON"        # Every Monday at 9 AM
+    board: "Ingestion Engineering"
+    format: "html"
+    send_to: ["slack", "email"]
+
+  daily_standup:
+    enabled: false
+    cron: "0 9 * * 1-5"        # Weekdays at 9 AM
+    board: "Ingestion Engineering"
+    format: "markdown"
+    preview_only: true

@@ -1,0 +1,65 @@
+# --- Secrets (NEVER COMMIT) ---
+.env
+.env.personal
+.env.team
+.env.local
+*.pem
+*.key
+
+# --- Instance config (ignored — examples are committed) ---
+crons.yml
+routing.yml
+developers.yml
+developers.override.yml
+
+# --- Generated content ---
+work/
+state/
+logs/
+metrics_reports/
+!metrics_reports/README.md
+*.md.sidecar
+*.log
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Streamlit ---
+.streamlit/secrets.toml
+
+# --- IDE / OS ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- Caches ---
+.ado-cache/
+.cache/
+
+# --- Node (if any) ---
+node_modules/
+
+# --- Tooling state (Claude Code / OMC) ---
+.omc/
+.claude/
+
+# --- Distribution artifacts (we ship these out-of-band) ---
+vamos.zip
+*.zip

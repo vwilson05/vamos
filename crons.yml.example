@@ -1,0 +1,46 @@
+# vamos cron schedule.
+# Copy to `crons.yml` (gitignored) and toggle entries on/off.
+#
+# Install with:    ./launch.sh --install-crons       (or `vamos cron-install`)
+# Uninstall:       vamos cron-uninstall
+# List active:     vamos cron-list
+
+crons:
+  # --- Personal flow (each engineer's laptop) ---
+  - name: vamos-daily
+    schedule: "*/30 * * * 1-5"      # every 30 min, weekdays
+    command: vamos daily
+    enabled: true
+    description: "Personal daily-loop dispatcher (sod / sync / eod)."
+
+  # --- Team service (one always-on host) ---
+  - name: vamos-hygiene-5pm
+    schedule: "0 17 * * 1-5"        # weekdays at 5pm local
+    command: vamos --profile team hygiene
+    enabled: false                  # opt-in once team profile is set up
+    description: "Daily team hygiene check, posts to Teams/Slack."
+
+  - name: vamos-at-risk-weekly
+    schedule: "0 9 * * MON"         # Monday 9am
+    command: vamos --profile team at-risk
+    enabled: false
+    description: "Weekly at-risk report for project leadership."
+
+  - name: vamos-healthcheck-weekly
+    schedule: "0 9 * * MON"         # Monday 9am
+    command: vamos --profile team healthcheck
+    enabled: false
+    description: "Weekly per-developer healthcheck snapshot."
+
+  - name: vamos-metrics-weekly
+    schedule: "0 9 * * MON"         # Monday 9am
+    command: vamos --profile team metrics generate --format html
+    enabled: false
+    description: "Weekly metrics HTML report."
+
+  # --- Service mode (run via launchd / systemd, not cron) ---
+  - name: vamos-pr-review-watch
+    schedule: launchd               # special: long-running daemon, not cron
+    command: vamos --profile team pr-review --watch
+    enabled: false
+    description: "Continuous PR-review service (auto-reviews new iterations)."
