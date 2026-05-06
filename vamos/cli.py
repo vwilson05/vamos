@@ -436,22 +436,14 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _launch_ui(port: int) -> int:
-    """Shell out to `streamlit run ui/app.py --server.port <port>`."""
-    import subprocess
-    from pathlib import Path
-    repo_root = Path(__file__).resolve().parent.parent
-    app = repo_root / "ui" / "app.py"
-    if not app.exists():
-        print(f"ERROR: UI not found at {app}")
-        return 2
+    """Boot the NiceGUI app in this process."""
     try:
-        return subprocess.call(
-            ["streamlit", "run", str(app), "--server.port", str(port)],
-            cwd=repo_root,
-        )
-    except FileNotFoundError:
-        print("streamlit not installed. Run: pip install -e '.[ui]'")
+        from ui.main import run_app
+    except ImportError as exc:
+        print(f"ERROR: UI not installed. Run: pip install -e '.[ui]'  ({exc})")
         return 2
+    run_app(port=port)
+    return 0
 
 
 if __name__ == "__main__":
