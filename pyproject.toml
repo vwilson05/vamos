@@ -22,4 +22,4 @@ ui = ["nicegui>=2.0"]
 vamos = "vamos.cli:main"
 
 [tool.setuptools.packages.find]
-include = ["vamos*"]
+include = ["vamos*", "ui*"]

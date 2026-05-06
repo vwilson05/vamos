@@ -436,7 +436,13 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def _launch_ui(port: int) -> int:
-    """Boot the NiceGUI app in this process."""
+    """Boot the NiceGUI app in this process. Adds repo root to sys.path as a
+    fallback for editable-install setups where `ui` isn't yet on the path."""
+    import sys
+    from pathlib import Path
+    repo_root = Path(__file__).resolve().parent.parent
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
     try:
         from ui.main import run_app
     except ImportError as exc:
