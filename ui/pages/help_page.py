@@ -43,10 +43,35 @@ def help_page():
 
 
 def _render_whatsnew():
-    ui.label("vamos 0.6.0").classes("text-xl font-bold text-slate-900 dark:text-slate-50")
-    ui.label("Released 2026-05-06  ·  Claude integration via MCP server.").classes(
+    ui.label("vamos 0.7.0").classes("text-xl font-bold text-slate-900 dark:text-slate-50")
+    ui.label("Released 2026-05-06  ·  Full persona coverage in MCP (25 tools).").classes(
         "text-xs text-slate-500 dark:text-slate-400"
     )
+
+    with ui.card().classes("w-full p-5 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"):
+        ui.markdown("""
+#### 0.7.0 — Full persona coverage in MCP
+
+The MCP server now mirrors the entire vamos CLI surface — 25 tools across
+4 personas. Claude can drive vamos exactly the way an engineer, reviewer,
+manager, or leader would type CLI commands.
+
+- **Engineer flow orchestrators** (8 new): `run_sod`, `run_sync`, `run_eod`,
+  `run_prep`, `capture_ticket`, `get_inbox`, `get_standup`, `get_dependencies`.
+  *"Claude, generate my EOD and post to Teams"* now works end-to-end.
+- **Reviewer** (3 new): `get_review_queue`, `get_review_load`, `vote_on_pr`.
+  *"Run review on PR 1234"* → read findings → *"approve it"* → done, all
+  without leaving Claude Code.
+- **Manager** (3 new): `list_engineer_tickets`, `get_engineer_brief`, `get_retro`.
+- **Leadership** (4 new): `get_at_risk`, `get_team_hygiene`,
+  `get_team_healthcheck`, `run_metrics`.
+
+Leadership tools always run side-effect-free — they never post to Teams/Slack
+from MCP. Use the CLI explicitly when you want to deliver a report.
+
+Restart your MCP connection (or run `claude mcp restart vamos`) to pick up
+the new tools.
+        """).classes("prose dark:prose-invert max-w-none text-sm")
 
     with ui.card().classes("w-full p-5 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"):
         ui.markdown("""
@@ -250,47 +275,94 @@ Restart Claude. Try: *"use vamos to fetch ticket 12345"*.
   — Claude inherits whatever PAT is in your `.env`.
     """).classes("prose dark:prose-invert max-w-none")
 
-    ui.label("Tools exposed").classes(
-        "text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-4 mb-2"
-    )
-
-    tools_table = [
-        ("get_ticket(id)", "read-only",
-         "Title, state, AC, branch suggestion, recent comments, linked PRs, next_actions."),
-        ("list_my_tickets(include_closed=False)", "read-only",
-         "Active tickets assigned to you, each with a state-aware next-action hint."),
-        ("start_work(id, comment=None)", "auto",
-         "Move ticket to Active and post a starting daily-standup comment."),
-        ("post_comment(id, text)", "auto",
-         "Post a daily progress note (satisfies the daily-comments hygiene rule)."),
-        ("open_pr(id, repo, branch, title, ...)", "auto",
-         "Create a PR via the ADO API and link the work item."),
-        ("run_pr_review(pr_id, repo, post=False, confirm=False)", "preview",
-         "Run vamos's automated reviewer; pass post=True + confirm=True to publish."),
-        ("run_hygiene_check(id)", "read-only",
-         "Run all 7 board-standards rules against one ticket; returns findings list."),
-        ("close_ticket(id, resolution, ..., confirm=False)", "confirm",
-         "Resolve/close with a resolution reason. Returns a preview unless confirm=True."),
+    persona_groups = [
+        ("Engineer (atomic)", [
+            ("get_ticket(id)", "read-only",
+             "Title, state, AC, branch suggestion, recent comments, linked PRs, next_actions."),
+            ("list_my_tickets(include_closed=False)", "read-only",
+             "Active tickets assigned to you, each with a state-aware next-action hint."),
+            ("start_work(id, comment=None)", "auto",
+             "Move ticket to Active and post a starting daily-standup comment."),
+            ("post_comment(id, text)", "auto",
+             "Post a daily progress note (satisfies the daily-comments rule)."),
+            ("open_pr(id, repo, branch, title, ...)", "auto",
+             "Create a PR via the ADO API and link the work item."),
+            ("run_pr_review(pr_id, repo, post=False, confirm=False)", "preview",
+             "Run the automated reviewer; pass post=True + confirm=True to publish."),
+            ("vote_on_pr(pr_id, repo, vote, confirm=False)", "confirm",
+             "Cast a PR vote (approve / approve-with-suggestions / wait-for-author / reject)."),
+            ("run_hygiene_check(id)", "read-only",
+             "Run all 7 board-standards rules against one ticket."),
+            ("close_ticket(id, resolution, ..., confirm=False)", "confirm",
+             "Resolve/close with a reason. Preview unless confirm=True."),
+        ]),
+        ("Engineer (flow orchestrators)", [
+            ("run_sod(force=False)", "auto",
+             "Pull today's tickets into work/YYYY-MM-DD.md."),
+            ("run_sync(dry_run=False)", "auto",
+             "Apply markdown edits to ADO via claude -p (LLM, ~30-90s)."),
+            ("run_eod(...)", "auto",
+             "Generate EOD, run final sync, post to Teams/Slack (LLM, ~30-60s)."),
+            ("run_prep(...)", "auto",
+             "One-shot: SOD + inbox + standup, all cached for the UI."),
+            ("capture_ticket(text, customer?, priority?)", "auto",
+             "Append [NEW] to today's MD."),
+            ("get_inbox(since_hours=48)", "read-only",
+             "Review requests / mentions / new P1s."),
+            ("get_standup()", "read-only",
+             "Yesterday/today/blockers brief."),
+            ("get_dependencies(ticket_id)", "read-only",
+             "Parent / children / blocked-by / related."),
+        ]),
+        ("Reviewer", [
+            ("get_review_queue(repo?)", "read-only",
+             "Triaged queue, blocked-on-me first, with buddy-routing flags."),
+            ("get_review_load()", "read-only",
+             "PR review distribution across all reviewers."),
+        ]),
+        ("Manager", [
+            ("list_engineer_tickets(engineer, include_closed=False)", "read-only",
+             "What's on someone's plate."),
+            ("get_engineer_brief(engineer, weeks=1)", "auto",
+             "1:1 brief markdown (LLM, ~30-60s)."),
+            ("get_retro(iteration?, weeks=2)", "auto",
+             "Sprint retro starter (LLM, ~30-60s)."),
+        ]),
+        ("Leadership", [
+            ("get_at_risk()", "read-only",
+             "Past-target / blocked P1s / aging items + aging PRs."),
+            ("get_team_hygiene()", "read-only",
+             "Full-board hygiene rollup (vs. single-ticket run_hygiene_check)."),
+            ("get_team_healthcheck()", "read-only",
+             "Per-engineer team-wide ticket snapshot."),
+            ("run_metrics(format='markdown')", "auto",
+             "Backlog / throughput / cycle time report."),
+        ]),
     ]
-    with ui.column().classes("w-full gap-2"):
-        for sig, safety, desc in tools_table:
-            with ui.card().classes(
-                "w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
-            ):
-                with ui.row().classes("items-start gap-3"):
-                    ui.code(sig).classes("text-xs flex-1")
-                    safety_color = {
-                        "read-only": "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
-                        "auto": "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
-                        "preview": "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-                        "confirm": "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
-                    }[safety]
-                    ui.label(safety).classes(
-                        f"text-xs px-2 py-0.5 rounded-full font-semibold {safety_color}"
+
+    safety_color = {
+        "read-only": "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+        "auto": "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
+        "preview": "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+        "confirm": "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+    }
+    for persona, tools in persona_groups:
+        ui.label(persona).classes(
+            "text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-4 mb-2 font-semibold"
+        )
+        with ui.column().classes("w-full gap-2"):
+            for sig, safety, desc in tools:
+                with ui.card().classes(
+                    "w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+                ):
+                    with ui.row().classes("items-start gap-3"):
+                        ui.code(sig).classes("text-xs flex-1")
+                        ui.label(safety).classes(
+                            f"text-xs px-2 py-0.5 rounded-full font-semibold {safety_color[safety]}"
+                        )
+                    ui.label(desc).classes(
+                        "text-sm text-slate-700 dark:text-slate-300 mt-2"
                     )
-                ui.label(desc).classes(
-                    "text-sm text-slate-700 dark:text-slate-300 mt-2"
-                )
 
 
 def _render_config():

@@ -36,8 +36,10 @@ except ImportError as exc:  # pragma: no cover
     )
     raise
 
+from .tools import flow as flow_tools
 from .tools import hygiene as hygiene_tools
 from .tools import prs as pr_tools
+from .tools import team as team_tools
 from .tools import tickets as ticket_tools
 
 log = logging.getLogger(__name__)
@@ -45,11 +47,14 @@ log = logging.getLogger(__name__)
 mcp = FastMCP(
     "vamos",
     instructions=(
-        "vamos exposes Azure DevOps ticket and PR actions for HaloMD's engineering "
-        "workflow. Every response includes `next_actions` — concrete tool calls "
-        "to consider next. Read-only and low-stakes write tools auto-execute. "
-        "close_ticket and run_pr_review (with post=True) require confirm=True; "
-        "always show the preview to a human before re-calling with confirm."
+        "vamos exposes HaloMD's full ADO workflow as MCP tools, organized by "
+        "persona: engineer (atomic + flow orchestrators), reviewer, manager, "
+        "leadership. Every ticket-shaped response includes `next_actions` — "
+        "concrete tool calls to consider next. Read-only and low-stakes write "
+        "tools auto-execute. close_ticket and run_pr_review (with post=True) "
+        "require confirm=True; always show the preview to a human before "
+        "re-calling with confirm. LLM-backed tools (run_sync, run_eod, "
+        "get_engineer_brief, get_retro) take 30-90s — set expectations."
     ),
 )
 
@@ -158,6 +163,32 @@ def run_pr_review(
 
 
 @mcp.tool()
+def vote_on_pr(
+    pr_id: int,
+    repo: str,
+    vote: str,
+    confirm: bool = False,
+) -> dict[str, Any]:
+    """Cast (or change) the current user's vote on a PR.
+
+    SAFETY: returns a dry-run preview unless confirm=True. When the user
+    explicitly says "approve it" / "reject this PR", treat that as the
+    confirmation and pass confirm=True directly — no extra round-trip.
+
+    Valid vote values:
+      - "approve"                  (score 10)
+      - "approve-with-suggestions" (score 5)
+      - "wait-for-author"          (score -5)
+      - "reject"                   (score -10)
+      - "no-vote"                  (score 0, clears any existing vote)
+    """
+    return ticket_ools_safe(
+        pr_tools.vote_on_pr,
+        pr_id=pr_id, repo=repo, vote=vote, confirm=confirm,
+    )
+
+
+@mcp.tool()
 def run_hygiene_check(ticket_id: int) -> dict[str, Any]:
     """Run all board-standards rules against a single ticket.
 
@@ -197,6 +228,219 @@ def close_ticket(
         ticket_id=ticket_id, resolution=resolution, comment=comment,
         target_state=target_state, confirm=confirm,
     )
+
+
+# ---------------- Engineer flow orchestrators ----------------
+
+@mcp.tool()
+def run_sod(force: bool = False) -> dict[str, Any]:
+    """Pull today's assigned tickets into work/YYYY-MM-DD.md.
+
+    Idempotent — returns the existing path if today's file is already
+    written, unless force=True.
+    """
+    return ticket_ools_safe(flow_tools.run_sod, force=force)
+
+
+@mcp.tool()
+def run_sync(dry_run: bool = False) -> dict[str, Any]:
+    """Apply today's markdown edits to ADO via claude -p.
+
+    LLM-backed — takes 30-90s. Use this when an engineer says "I just did X
+    for ticket N, post the comments and commit my edits". Pass dry_run=True
+    to preview the action plan without executing.
+    """
+    return ticket_ools_safe(flow_tools.run_sync, dry_run=dry_run)
+
+
+@mcp.tool()
+def run_eod(
+    dry_run: bool = False,
+    skip_sync: bool = False,
+    skip_post: bool = False,
+    skip_slack: bool = False,
+) -> dict[str, Any]:
+    """Generate EOD summary, run final sync, post to Teams/Slack.
+
+    LLM-backed — takes 30-60s. Returns the generated text in `text` so
+    you can show the user before posting. Pass dry_run=True to preview
+    without posting or syncing.
+    """
+    return ticket_ools_safe(
+        flow_tools.run_eod,
+        dry_run=dry_run, skip_sync=skip_sync,
+        skip_post=skip_post, skip_slack=skip_slack,
+    )
+
+
+@mcp.tool()
+def run_prep(
+    force_sod: bool = False,
+    skip_sod: bool = False,
+    skip_inbox: bool = False,
+    skip_standup: bool = False,
+) -> dict[str, Any]:
+    """One-shot morning routine: SOD + inbox + standup, all cached.
+
+    Use as a single "good morning, prep my day" call. Persists results
+    to state/ so the UI loads them instantly.
+    """
+    return ticket_ools_safe(
+        flow_tools.run_prep,
+        force_sod=force_sod, skip_sod=skip_sod,
+        skip_inbox=skip_inbox, skip_standup=skip_standup,
+    )
+
+
+@mcp.tool()
+def capture_ticket(
+    text: str,
+    customer: str | None = None,
+    priority: int | None = None,
+) -> dict[str, Any]:
+    """Append a [NEW] section to today's daily markdown.
+
+    Quick-capture from anywhere. The next `run_sync` will turn it into
+    a real ADO work item. First line is the title; rest is description.
+    """
+    return ticket_ools_safe(
+        flow_tools.capture_ticket,
+        text=text, customer=customer, priority=priority,
+    )
+
+
+# ---------------- Engineer support ----------------
+
+@mcp.tool()
+def get_inbox(since_hours: int = 48) -> dict[str, Any]:
+    """Aggregate everything that wants the engineer's attention.
+
+    Returns review requests, PR comments, ticket comments mentioning you,
+    and new P1/P2 assignments from the last `since_hours`.
+    """
+    return ticket_ools_safe(flow_tools.get_inbox, since_hours=since_hours)
+
+
+@mcp.tool()
+def get_standup() -> dict[str, Any]:
+    """Auto-draft today's yesterday/today/blockers standup brief."""
+    return ticket_ools_safe(flow_tools.get_standup)
+
+
+@mcp.tool()
+def get_dependencies(ticket_id: int) -> dict[str, Any]:
+    """Show parent/children/blocked-by/blocks/related/duplicates for a ticket.
+
+    Use before starting work on a ticket to understand the surrounding
+    context. Returns deps grouped by relationship type.
+    """
+    return ticket_ools_safe(team_tools.get_dependencies, ticket_id=ticket_id)
+
+
+# ---------------- Reviewer ----------------
+
+@mcp.tool()
+def get_review_queue(repo: str | None = None) -> dict[str, Any]:
+    """Triaged PR review queue — blocked-on-me first.
+
+    Pass `repo` to limit to one ADO repo, or omit to scan every repo in
+    the project. Each item has age, role, blocked_on_me flag, and any
+    buddy-routing skip warnings.
+    """
+    return ticket_ools_safe(team_tools.get_review_queue, repo=repo)
+
+
+@mcp.tool()
+def get_review_load() -> dict[str, Any]:
+    """PR review-load distribution across all reviewers.
+
+    Use before assigning a review to route fairly.
+    """
+    return ticket_ools_safe(team_tools.get_review_load)
+
+
+# ---------------- Manager ----------------
+
+@mcp.tool()
+def list_engineer_tickets(
+    engineer: str,
+    include_closed: bool = False,
+) -> dict[str, Any]:
+    """List active tickets assigned to a specific engineer.
+
+    `engineer` accepts display name or email — vamos's identity layer
+    collapses ADO's split identities for you.
+    """
+    return ticket_ools_safe(
+        team_tools.list_engineer_tickets,
+        engineer=engineer, include_closed=include_closed,
+    )
+
+
+@mcp.tool()
+def get_engineer_brief(engineer: str, weeks: int = 1) -> dict[str, Any]:
+    """1:1 brief markdown for a specific engineer covering the last N weeks.
+
+    LLM-backed — takes 30-60s. Returns recent shipped, active, blocked,
+    and questions to ask, formatted for direct paste into the 1:1 doc.
+    """
+    return ticket_ools_safe(
+        team_tools.get_engineer_brief, engineer=engineer, weeks=weeks,
+    )
+
+
+@mcp.tool()
+def get_retro(iteration: str | None = None, weeks: int = 2) -> dict[str, Any]:
+    """Sprint retro starter — shipped / missed / themes / customers.
+
+    LLM-backed — takes 30-60s. Pass an explicit iteration path or omit
+    to use HYGIENE_ITERATION_PATH from config.
+    """
+    return ticket_ools_safe(
+        team_tools.get_retro, iteration=iteration, weeks=weeks,
+    )
+
+
+# ---------------- Leadership ----------------
+
+@mcp.tool()
+def get_at_risk() -> dict[str, Any]:
+    """At-risk scan: past-target / blocked P1s / aging items + aging PRs.
+
+    Read-only — never posts to Teams/Slack from MCP. Returns the full
+    Report (findings + counts + markdown render).
+    """
+    return ticket_ools_safe(team_tools.get_at_risk)
+
+
+@mcp.tool()
+def get_team_hygiene() -> dict[str, Any]:
+    """Full-board hygiene rollup — runs all 7 rules across the whole board.
+
+    Wider scope than `run_hygiene_check` (single ticket). Read-only,
+    never posts comments. Use for weekly leadership reviews.
+    """
+    return ticket_ools_safe(team_tools.get_team_hygiene)
+
+
+@mcp.tool()
+def get_team_healthcheck() -> dict[str, Any]:
+    """Per-engineer team-wide ticket snapshot.
+
+    Side-effect-free — never posts. Returns the full markdown rollup.
+    """
+    return ticket_ools_safe(team_tools.get_team_healthcheck)
+
+
+@mcp.tool()
+def run_metrics(format: str = "markdown") -> dict[str, Any]:
+    """Generate the board metrics report — backlog / throughput / cycle time.
+
+    `format` is "markdown", "html", or "json". Always dry-run from MCP —
+    never sends notifications. Returns the output file path + a tiny
+    summary; read the file with file tools for the full report.
+    """
+    return ticket_ools_safe(team_tools.run_metrics, format=format)
 
 
 # ---------------------------------------------------------------------------

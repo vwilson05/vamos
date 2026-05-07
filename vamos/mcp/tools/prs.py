@@ -10,7 +10,7 @@ import logging
 from typing import Any
 
 from ...llm import call_claude, parse_json_response, render_prompt
-from ...pr_review.client import PRClient, build_brief, post_review
+from ...pr_review.client import PRClient, VOTE_VALUES, build_brief, post_review
 from .. import trail
 from .._context import get_ctx
 
@@ -135,6 +135,74 @@ def run_pr_review(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def vote_on_pr(
+    pr_id: int,
+    repo: str,
+    vote: str,
+    confirm: bool = False,
+) -> dict[str, Any]:
+    """Cast (or change) the current user's vote on a PR.
+
+    SAFETY: returns a dry-run preview unless confirm=True. Voting is visible
+    to the PR author and team — same safety pattern as close_ticket.
+
+    Valid `vote` values: approve, approve-with-suggestions, wait-for-author,
+    reject, no-vote (clears any existing vote).
+    """
+    if vote not in VOTE_VALUES:
+        return {
+            "error": f"Unknown vote {vote!r}. "
+                     f"Valid: {', '.join(VOTE_VALUES)}",
+        }
+    ctx = get_ctx()
+    pr_client = PRClient(ctx.cfg.ado_org_url, ctx.cfg.ado_project, repo, ctx.cfg.ado_pat)
+
+    score = VOTE_VALUES[vote]
+    base = {
+        "pr_id": pr_id,
+        "repo": repo,
+        "vote": vote,
+        "score": score,
+        "url": _pr_web_url(ctx.cfg.ado_org_url, ctx.cfg.ado_project, repo, pr_id),
+    }
+
+    if not confirm:
+        return {
+            **base,
+            "preview": True,
+            "message": (
+                f"Would set your vote to '{vote}' (score={score}) on PR #{pr_id} "
+                f"in {repo}. Re-call with confirm=True to apply."
+            ),
+        }
+
+    try:
+        me = pr_client.me()
+        reviewer_id = me["id"]
+    except Exception as exc:  # noqa: BLE001
+        return {**base, "applied": False, "error": f"Could not resolve current user: {exc}"}
+
+    try:
+        pr_client.vote(pr_id, reviewer_id, vote)
+    except Exception as exc:  # noqa: BLE001
+        return {**base, "applied": False, "error": str(exc)}
+
+    result = {**base, "applied": True, "reviewer_id": reviewer_id}
+
+    # Append to trail across any work items linked to the PR.
+    try:
+        ticket_ids = ctx.client.get_pr_work_item_ids(repo, pr_id)
+    except Exception:
+        ticket_ids = []
+    for tid in ticket_ids:
+        trail.append_event(
+            ctx.cfg.state_dir, tid, "vote_on_pr",
+            args={"pr_id": pr_id, "repo": repo, "vote": vote},
+            result={"score": score, "applied": True},
+        )
+    return result
 
 
 def _pr_web_url(org_url: str, project: str, repo: str, pr_id: int) -> str:

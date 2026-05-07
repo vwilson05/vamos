@@ -160,20 +160,62 @@ vamos mcp install
 
 Restart Claude. Try: *"use vamos to fetch ticket 12345"*.
 
-**Tools exposed:**
+**25 tools, organized by persona.** Engineer-flow atomics, full CLI parity orchestrators, plus reviewer / manager / leadership tools.
+
+*Engineer (atomic):*
 
 | Tool | Safety | What it does |
 |---|---|---|
-| `get_ticket` | read-only | Title, state, AC, branch suggestion, recent comments, linked PRs, and `next_actions`. |
-| `list_my_tickets` | read-only | Tickets assigned to you, each with a state-aware next-action hint. |
-| `start_work` | auto-execute | Move ticket → Active, post a starting daily-standup comment. |
-| `post_comment` | auto-execute | Post a daily progress note (satisfies the `daily-comments` hygiene rule). |
-| `open_pr` | auto-execute | Create a PR in the named ADO repo and link it to the ticket. |
-| `run_pr_review` | preview by default | Run vamos's automated reviewer; pass `post=True, confirm=True` to publish. |
+| `get_ticket` | read-only | Title, state, AC, branch suggestion, recent comments, linked PRs, `next_actions`. |
+| `list_my_tickets` | read-only | Tickets assigned to you with state-aware next-action hints. |
+| `start_work` | auto | Move ticket → Active, post a starting daily-standup comment. |
+| `post_comment` | auto | Post a daily progress note (satisfies the `daily-comments` rule). |
+| `open_pr` | auto | Create a PR via the ADO API, link the work item. |
+| `run_pr_review` | preview | Run vamos's automated reviewer; `post=True, confirm=True` to publish. |
+| `vote_on_pr` | confirm | Cast a PR vote (approve / approve-with-suggestions / wait-for-author / reject). |
 | `run_hygiene_check` | read-only | Run all 7 hygiene rules against a single ticket. |
-| `close_ticket` | confirm required | Resolve/close with a resolution reason. Returns a preview unless `confirm=True`. |
+| `close_ticket` | confirm | Resolve/close with a resolution reason. Preview unless `confirm=True`. |
 
-Every response carries `next_actions` derived live from ADO state — Claude doesn't have to remember where it is in the flow. Every write tool appends to `state/trail/<ticket>.jsonl` so you have an audit record of which actions came from a human, the CLI, or Claude.
+*Engineer (flow orchestrators — 1:1 with the CLI):*
+
+| Tool | What it does |
+|---|---|
+| `run_sod(force=False)` | Pull today's tickets into `work/YYYY-MM-DD.md`. |
+| `run_sync(dry_run=False)` | Apply markdown edits to ADO via `claude -p` (LLM, ~30-90s). |
+| `run_eod(...)` | Generate EOD, run final sync, post to Teams/Slack (LLM, ~30-60s). |
+| `run_prep(...)` | One-shot: SOD + inbox + standup, all cached. |
+| `capture_ticket(text, customer?, priority?)` | Append `[NEW]` to today's MD. |
+| `get_inbox(since_hours=48)` | Review requests / mentions / new P1s. |
+| `get_standup()` | Yesterday/today/blockers brief. |
+| `get_dependencies(ticket_id)` | Parent / children / blocked-by / related. |
+
+*Reviewer:*
+
+| Tool | What it does |
+|---|---|
+| `get_review_queue(repo?)` | Triaged queue, blocked-on-me first, with buddy-routing flags. |
+| `get_review_load()` | PR review distribution across all reviewers. |
+
+*Manager:*
+
+| Tool | What it does |
+|---|---|
+| `list_engineer_tickets(engineer, include_closed=False)` | What's on someone's plate. |
+| `get_engineer_brief(engineer, weeks=1)` | 1:1 brief markdown (LLM, ~30-60s). |
+| `get_retro(iteration?, weeks=2)` | Sprint retro starter (LLM, ~30-60s). |
+
+*Leadership:*
+
+| Tool | What it does |
+|---|---|
+| `get_at_risk()` | Past-target / blocked P1s / aging items + aging PRs. |
+| `get_team_hygiene()` | Full-board hygiene rollup. |
+| `get_team_healthcheck()` | Per-engineer team-wide ticket snapshot. |
+| `run_metrics(format='markdown')` | Backlog / throughput / cycle time report. |
+
+Every ticket-shaped response carries `next_actions` derived live from ADO state — Claude doesn't have to remember where it is in the flow. Every write tool appends to `state/trail/<ticket>.jsonl` so you have an audit record of which actions came from a human, the CLI, or Claude.
+
+Side-effect-free in MCP: the leadership tools (`get_at_risk`, `get_team_hygiene`, `get_team_healthcheck`, `run_metrics`) never post to Teams/Slack from MCP — they always run with `skip_post=True`. Run from the CLI explicitly when you actually want to deliver them.
 
 The server runs over stdio (per-engineer install). It's read/write by default; set `ADO_READ_ONLY=true` in `.env` to lock it to safe tools only.
 
