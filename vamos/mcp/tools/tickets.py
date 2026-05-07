@@ -17,7 +17,7 @@ from datetime import date
 from typing import Any
 
 from ...ado import WorkItem
-from .. import trail, workflow
+from .. import share, trail, workflow
 from .._context import get_ctx
 
 log = logging.getLogger(__name__)
@@ -132,6 +132,10 @@ def start_work(ticket_id: int, comment: str | None = None) -> dict[str, Any]:
     }
     trail.append_event(ctx.cfg.state_dir, ticket_id, "start_work",
                        args={"comment": body}, result=result)
+    if state_changed:
+        # Only shout when this actually moved a ticket — re-posting "Started"
+        # on an already-Active ticket isn't a milestone worth announcing.
+        share.started_work(ctx.cfg, ticket_id, title=after.title)
     return result
 
 
@@ -229,6 +233,7 @@ def close_ticket(
     trail.append_event(ctx.cfg.state_dir, ticket_id, "close_ticket",
                        args={"resolution": resolution, "target_state": target_state},
                        result={"new_state": after.state})
+    share.closed_ticket(ctx.cfg, ticket_id, title=item.title, resolution=resolution)
     return result
 
 

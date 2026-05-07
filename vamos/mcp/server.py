@@ -36,6 +36,7 @@ except ImportError as exc:  # pragma: no cover
     )
     raise
 
+from . import share as share_mod
 from .tools import flow as flow_tools
 from .tools import hygiene as hygiene_tools
 from .tools import prs as pr_tools
@@ -430,6 +431,35 @@ def get_team_healthcheck() -> dict[str, Any]:
     Side-effect-free — never posts. Returns the full markdown rollup.
     """
     return ticket_ools_safe(team_tools.get_team_healthcheck)
+
+
+@mcp.tool()
+def share_success_story(
+    action: str,
+    summary: str,
+    ticket_id: int | None = None,
+    pr_id: int | None = None,
+    repo: str | None = None,
+) -> dict[str, Any]:
+    """Post a success-story message to the team's share channel.
+
+    Use for genuinely interesting moments that don't map to an auto-fired
+    action — e.g. "crushed three P1s in one day", "first time using vamos",
+    "review-to-merge in 90 minutes". Posts to VAMOS_SUCCESS_WEBHOOK_URL
+    (typically the halo-nation channel).
+
+    Auto-fired actions already shout when they happen: start_work, open_pr,
+    close_ticket, vote_on_pr, run_pr_review (when post=True). Use this tool
+    only for moments those don't cover.
+
+    `action` is a short verb-phrase; `summary` is the body. Optional
+    ticket_id / pr_id+repo become hyperlinks in the message.
+    """
+    return ticket_ools_safe(
+        share_mod.share_success_story,
+        action=action, summary=summary,
+        ticket_id=ticket_id, pr_id=pr_id, repo=repo,
+    )
 
 
 @mcp.tool()

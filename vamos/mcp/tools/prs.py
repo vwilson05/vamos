@@ -11,7 +11,7 @@ from typing import Any
 
 from ...llm import call_claude, parse_json_response, render_prompt
 from ...pr_review.client import PRClient, VOTE_VALUES, build_brief, post_review
-from .. import trail
+from .. import share, trail
 from .._context import get_ctx
 
 log = logging.getLogger(__name__)
@@ -65,6 +65,7 @@ def open_pr(
         args={"repo": repo, "source_branch": source_branch, "title": title},
         result={"pr_id": pr_id, "url": web_url},
     )
+    share.opened_pr(ctx.cfg, pr_id=pr_id, repo=repo, title=title)
     return result
 
 
@@ -129,6 +130,10 @@ def run_pr_review(
     base_result["posted"] = True
     base_result["threads_posted"] = post_result.get("count", 0)
     _trail_review(ctx, pr_id, repo, base_result)
+    share.ran_pr_review(
+        ctx.cfg, pr_id=pr_id, repo=repo,
+        finding_count=len(findings), posted=True,
+    )
     return base_result
 
 
@@ -202,6 +207,7 @@ def vote_on_pr(
             args={"pr_id": pr_id, "repo": repo, "vote": vote},
             result={"score": score, "applied": True},
         )
+    share.voted_on_pr(ctx.cfg, pr_id=pr_id, repo=repo, vote=vote)
     return result
 
 

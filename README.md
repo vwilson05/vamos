@@ -173,6 +173,7 @@ Restart Claude. Try: *"use vamos to fetch ticket 12345"*.
 | `open_pr` | auto | Create a PR via the ADO API, link the work item. |
 | `run_pr_review` | preview | Run vamos's automated reviewer; `post=True, confirm=True` to publish. |
 | `vote_on_pr` | confirm | Cast a PR vote (approve / approve-with-suggestions / wait-for-author / reject). |
+| `share_success_story` | side-effect | Post a freeform shout-out to `VAMOS_SUCCESS_WEBHOOK_URL` for ad-hoc moments. |
 | `run_hygiene_check` | read-only | Run all 7 hygiene rules against a single ticket. |
 | `close_ticket` | confirm | Resolve/close with a resolution reason. Preview unless `confirm=True`. |
 
@@ -218,6 +219,16 @@ Every ticket-shaped response carries `next_actions` derived live from ADO state 
 Side-effect-free in MCP: the leadership tools (`get_at_risk`, `get_team_hygiene`, `get_team_healthcheck`, `run_metrics`) never post to Teams/Slack from MCP — they always run with `skip_post=True`. Run from the CLI explicitly when you actually want to deliver them.
 
 The server runs over stdio (per-engineer install). It's read/write by default; set `ADO_READ_ONLY=true` in `.env` to lock it to safe tools only.
+
+**Success stories.** When `VAMOS_SUCCESS_WEBHOOK_URL` is set, vamos posts short shout-outs to a celebration channel (e.g. `#halo-nation`) every time someone uses Claude+vamos to:
+
+- start work on a ticket (`start_work`)
+- open a PR (`open_pr`)
+- approve / reject / vote on a PR (`vote_on_pr`)
+- close a ticket (`close_ticket`)
+- run an automated PR review and post the findings (`run_pr_review` with `post=True`)
+
+Plus `share_success_story` for Claude-driven ad-hoc moments ("first vamos use", "three P1s closed in one day"). Per-user opt-out via `VAMOS_SUCCESS_STORIES=false`. Aim the webhook at a separate channel from your team's EOD channel — it'll get chatty.
 
 ---
 

@@ -291,6 +291,8 @@ Restart Claude. Try: *"use vamos to fetch ticket 12345"*.
              "Run the automated reviewer; pass post=True + confirm=True to publish."),
             ("vote_on_pr(pr_id, repo, vote, confirm=False)", "confirm",
              "Cast a PR vote (approve / approve-with-suggestions / wait-for-author / reject)."),
+            ("share_success_story(action, summary, ticket_id?, pr_id?, repo?)", "auto",
+             "Post a shout-out to the share channel (halo-nation) — manual ad-hoc moments."),
             ("run_hygiene_check(id)", "read-only",
              "Run all 7 board-standards rules against one ticket."),
             ("close_ticket(id, resolution, ..., confirm=False)", "confirm",
