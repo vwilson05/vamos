@@ -8,6 +8,7 @@ vamos is one Python binary plus one NiceGUI browser app, bundling every workflow
 - **Team reporting** — per-developer healthcheck snapshots, board metrics for leadership, hygiene checks against your standards, at-risk scans for past-target / blocked items.
 - **PR review** — reviews Azure DevOps PRs (interactively or as a polling service) and posts structured findings as inline comments. Powered by Claude.
 - **AI-assisted cleanup** — for hygiene findings, vamos proposes concrete fixes (comment text, state changes, field values) and applies them on confirm.
+- **Claude integration (MCP)** — exposes vamos as a stdio MCP server so Claude Desktop and Claude Code can drive the full ticket-to-close flow: pick up a ticket, plan, code, open the PR, run review, fix findings, verify hygiene, close cleanly.
 
 CLI for engineers, browser UI for project leadership / non-techies. Same backend either way. Cross-platform (macOS, Linux, Windows).
 
@@ -119,6 +120,14 @@ All commands accept `-v` / `--verbose` and `--profile {personal,team}`.
 | `vamos pr-review --watch` | Service mode: poll every repo, auto-review new iterations. |
 | `vamos review-queue` | Triaged queue, blocked-on-me first. |
 
+**Claude integration**
+
+| Command | What it does |
+|---|---|
+| `vamos mcp` | Run the stdio MCP server (Claude Desktop / Claude Code call this). |
+| `vamos mcp install` | Print copy-paste install instructions for Claude Desktop and Claude Code. |
+| `vamos mcp print-config` | Emit JSON for `claude_desktop_config.json`. |
+
 **Setup & scheduling**
 
 | Command | What it does |
@@ -130,6 +139,43 @@ All commands accept `-v` / `--verbose` and `--profile {personal,team}`.
 | `vamos cron-list` | Show configured + currently-installed scheduled tasks. |
 | `vamos --board all hygiene` | Run team agents across every board in `.ado-metrics.yml`. |
 | `vamos ui` | Launch the NiceGUI app on http://localhost:8501. |
+
+---
+
+## Claude integration (MCP)
+
+vamos ships an [MCP](https://modelcontextprotocol.io) server so Claude Desktop and Claude Code can drive your ADO work directly. After installing, Claude can pick up a ticket, plan the work, open a PR, run review, verify hygiene, and close the ticket — with a human in the loop at any step.
+
+**Install:**
+
+```bash
+pip install -e '.[mcp]'
+
+# Claude Code:
+claude mcp add vamos -- vamos mcp
+
+# Claude Desktop: print the config snippet
+vamos mcp install
+```
+
+Restart Claude. Try: *"use vamos to fetch ticket 12345"*.
+
+**Tools exposed:**
+
+| Tool | Safety | What it does |
+|---|---|---|
+| `get_ticket` | read-only | Title, state, AC, branch suggestion, recent comments, linked PRs, and `next_actions`. |
+| `list_my_tickets` | read-only | Tickets assigned to you, each with a state-aware next-action hint. |
+| `start_work` | auto-execute | Move ticket → Active, post a starting daily-standup comment. |
+| `post_comment` | auto-execute | Post a daily progress note (satisfies the `daily-comments` hygiene rule). |
+| `open_pr` | auto-execute | Create a PR in the named ADO repo and link it to the ticket. |
+| `run_pr_review` | preview by default | Run vamos's automated reviewer; pass `post=True, confirm=True` to publish. |
+| `run_hygiene_check` | read-only | Run all 7 hygiene rules against a single ticket. |
+| `close_ticket` | confirm required | Resolve/close with a resolution reason. Returns a preview unless `confirm=True`. |
+
+Every response carries `next_actions` derived live from ADO state — Claude doesn't have to remember where it is in the flow. Every write tool appends to `state/trail/<ticket>.jsonl` so you have an audit record of which actions came from a human, the CLI, or Claude.
+
+The server runs over stdio (per-engineer install). It's read/write by default; set `ADO_READ_ONLY=true` in `.env` to lock it to safe tools only.
 
 ---
 

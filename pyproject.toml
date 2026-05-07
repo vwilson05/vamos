@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vamos"
-version = "0.5.0"
+version = "0.6.0"
 description = "HaloMD agent suite — personal daily flow, team reporting, PR review."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -17,6 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 ui = ["nicegui>=2.0"]
+mcp = ["mcp[cli]>=1.2"]
 
 [project.scripts]
 vamos = "vamos.cli:main"

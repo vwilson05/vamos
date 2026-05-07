@@ -20,6 +20,7 @@ def help_page():
             tab_whatsnew = ui.tab("What's new", icon="campaign")
             tab_overview = ui.tab("Overview", icon="info")
             tab_cli = ui.tab("CLI reference", icon="terminal")
+            tab_mcp = ui.tab("Claude (MCP)", icon="rocket_launch")
             tab_config = ui.tab("Configuration", icon="settings")
             tab_hygiene = ui.tab("Hygiene rules", icon="cleaning_services")
             tab_ops = ui.tab("Operations", icon="construction")
@@ -31,6 +32,8 @@ def help_page():
                 _render_overview()
             with ui.tab_panel(tab_cli):
                 _render_cli_reference()
+            with ui.tab_panel(tab_mcp):
+                _render_mcp()
             with ui.tab_panel(tab_config):
                 _render_config()
             with ui.tab_panel(tab_hygiene):
@@ -40,10 +43,41 @@ def help_page():
 
 
 def _render_whatsnew():
-    ui.label("vamos 0.5.0").classes("text-xl font-bold text-slate-900 dark:text-slate-50")
-    ui.label("Released 2026-05-06  ·  Full UI rebuild on NiceGUI.").classes(
+    ui.label("vamos 0.6.0").classes("text-xl font-bold text-slate-900 dark:text-slate-50")
+    ui.label("Released 2026-05-06  ·  Claude integration via MCP server.").classes(
         "text-xs text-slate-500 dark:text-slate-400"
     )
+
+    with ui.card().classes("w-full p-5 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"):
+        ui.markdown("""
+#### 0.6.0 — vamos as an MCP server for Claude
+
+vamos now exposes its core actions as an MCP server. Claude Desktop and
+Claude Code can drive your entire ticket-to-close flow: pick up a ticket,
+plan, code, open a PR, run review, verify hygiene, and close cleanly.
+
+- **8 tools**: `get_ticket`, `list_my_tickets`, `start_work`, `post_comment`,
+  `open_pr`, `run_pr_review`, `run_hygiene_check`, `close_ticket`.
+- **Stateless with workflow hints** — every response carries a `next_actions`
+  field derived live from ADO, so Claude doesn't have to track where it is
+  in the flow.
+- **Safety rails** — read-only and low-stakes writes auto-execute;
+  `close_ticket` and `run_pr_review --post` require an explicit `confirm=True`
+  so Claude can't accidentally mutate state.
+- **Audit trail** — every tool call appends to `state/trail/<ticket>.jsonl`
+  with actor + tool + result, so you can see who did what (Claude, the CLI,
+  or a human in the UI).
+
+Install in 30 seconds:
+
+```bash
+pip install -e '.[mcp]'
+claude mcp add vamos -- vamos mcp     # Claude Code
+vamos mcp install                     # Claude Desktop snippet
+```
+
+See the **Claude (MCP)** tab for the full reference.
+        """).classes("prose dark:prose-invert max-w-none text-sm")
 
     with ui.card().classes("w-full p-5 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"):
         ui.markdown("""
@@ -148,6 +182,11 @@ def _render_cli_reference():
             ("vamos pr-review --watch", "Service mode: poll + auto-review new iterations."),
             ("vamos review-queue", "Triaged queue, blocked-on-me first."),
         ]),
+        ("Claude (MCP)", [
+            ("vamos mcp", "Run the stdio MCP server (Claude calls this)."),
+            ("vamos mcp install", "Print copy-paste install instructions."),
+            ("vamos mcp print-config", "Emit JSON for claude_desktop_config.json."),
+        ]),
         ("Setup", [
             ("./launch.sh", "Mac/Linux: ensure venv → install deps → launch UI."),
             (".\\launch.ps1", "Windows: same."),
@@ -170,6 +209,88 @@ def _render_cli_reference():
                     ui.label(desc).classes(
                         "text-sm text-slate-700 dark:text-slate-300 flex-1"
                     )
+
+
+def _render_mcp():
+    ui.markdown("""
+### Claude integration (MCP)
+
+vamos ships a stdio MCP server so **Claude Desktop** and **Claude Code** can
+drive your ADO work directly. After installing, you can ask Claude things like
+*"work ticket 28855"* and it will fetch the ticket, plan the work, open a PR,
+run review, verify hygiene, and close cleanly — pausing for you whenever
+human judgment is needed.
+
+#### Install
+
+```bash
+pip install -e '.[mcp]'
+
+# Claude Code (recommended):
+claude mcp add vamos -- vamos mcp
+
+# Claude Desktop: print the config snippet to paste:
+vamos mcp install
+```
+
+Restart Claude. Try: *"use vamos to fetch ticket 12345"*.
+
+#### How it works
+
+- **Stateless tools, computed hints.** Every response carries a `next_actions`
+  field derived live from ADO state + linked PRs + recent trail. Claude
+  doesn't need to remember where it is — each call tells it.
+- **Safety rails.** Read-only and low-stakes writes auto-execute. Mutations
+  with real blast radius (`close_ticket`, posting PR review comments)
+  return a dry-run preview unless `confirm=True`.
+- **Audit trail.** Every tool call appends to `state/trail/<ticket>.jsonl`
+  with `actor + tool + args + result`. You can tell which actions came from
+  Claude vs. the CLI vs. a human.
+- **Per-engineer install** over stdio. No shared service, no auth shenanigans
+  — Claude inherits whatever PAT is in your `.env`.
+    """).classes("prose dark:prose-invert max-w-none")
+
+    ui.label("Tools exposed").classes(
+        "text-xs uppercase tracking-wider text-slate-500 dark:text-slate-400 mt-4 mb-2"
+    )
+
+    tools_table = [
+        ("get_ticket(id)", "read-only",
+         "Title, state, AC, branch suggestion, recent comments, linked PRs, next_actions."),
+        ("list_my_tickets(include_closed=False)", "read-only",
+         "Active tickets assigned to you, each with a state-aware next-action hint."),
+        ("start_work(id, comment=None)", "auto",
+         "Move ticket to Active and post a starting daily-standup comment."),
+        ("post_comment(id, text)", "auto",
+         "Post a daily progress note (satisfies the daily-comments hygiene rule)."),
+        ("open_pr(id, repo, branch, title, ...)", "auto",
+         "Create a PR via the ADO API and link the work item."),
+        ("run_pr_review(pr_id, repo, post=False, confirm=False)", "preview",
+         "Run vamos's automated reviewer; pass post=True + confirm=True to publish."),
+        ("run_hygiene_check(id)", "read-only",
+         "Run all 7 board-standards rules against one ticket; returns findings list."),
+        ("close_ticket(id, resolution, ..., confirm=False)", "confirm",
+         "Resolve/close with a resolution reason. Returns a preview unless confirm=True."),
+    ]
+    with ui.column().classes("w-full gap-2"):
+        for sig, safety, desc in tools_table:
+            with ui.card().classes(
+                "w-full p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700"
+            ):
+                with ui.row().classes("items-start gap-3"):
+                    ui.code(sig).classes("text-xs flex-1")
+                    safety_color = {
+                        "read-only": "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400",
+                        "auto": "bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300",
+                        "preview": "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+                        "confirm": "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
+                    }[safety]
+                    ui.label(safety).classes(
+                        f"text-xs px-2 py-0.5 rounded-full font-semibold {safety_color}"
+                    )
+                ui.label(desc).classes(
+                    "text-sm text-slate-700 dark:text-slate-300 mt-2"
+                )
 
 
 def _render_config():

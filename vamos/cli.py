@@ -209,6 +209,19 @@ def main(argv: list[str] | None = None) -> int:
     p_ui = sub.add_parser("ui", help="Launch the Streamlit UI on localhost")
     p_ui.add_argument("--port", type=int, default=8501)
 
+    # --- MCP server (Claude Desktop / Claude Code integration) ---
+    p_mcp = sub.add_parser(
+        "mcp",
+        help="Run the vamos MCP server over stdio (for Claude Desktop / Claude Code)",
+    )
+    p_mcp.add_argument(
+        "action", nargs="?", default="serve",
+        choices=["serve", "install", "print-config"],
+        help="serve (default) starts the stdio server. "
+             "install prints copy-paste setup instructions. "
+             "print-config emits JSON for claude_desktop_config.json.",
+    )
+
     # --- Diagnostics ---
     sub.add_parser("test", help="Smoke test: verify ADO auth and print assigned item count")
 
@@ -411,6 +424,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "ui":
         return _launch_ui(args.port)
 
+    if args.cmd == "mcp":
+        return _run_mcp(args.action)
+
     if args.cmd == "test":
         client = ADOClient(cfg.ado_org_url, cfg.ado_project, cfg.ado_pat, read_only=True)
         ids = client.query_assigned(cfg.assigned_user_clause)
@@ -432,6 +448,65 @@ def main(argv: list[str] | None = None) -> int:
             return 1
 
     parser.print_help()
+    return 1
+
+
+def _run_mcp(action: str) -> int:
+    """Dispatch the `vamos mcp` subcommand."""
+    import shutil
+
+    if action == "serve":
+        try:
+            from .mcp.server import run as run_server
+        except ImportError as exc:
+            print(f"ERROR: MCP extras not installed. Run: pip install -e '.[mcp]'  ({exc})")
+            return 2
+        run_server()
+        return 0
+
+    vamos_path = shutil.which("vamos") or "vamos"
+
+    if action == "print-config":
+        import json
+        snippet = {
+            "mcpServers": {
+                "vamos": {
+                    "command": vamos_path,
+                    "args": ["mcp"],
+                }
+            }
+        }
+        print(json.dumps(snippet, indent=2))
+        return 0
+
+    if action == "install":
+        print("vamos MCP server — install instructions")
+        print()
+        print("1. Make sure mcp extras are installed:")
+        print("     pip install -e '.[mcp]'")
+        print()
+        print("2A. Claude Code (recommended):")
+        print(f"     claude mcp add vamos -- {vamos_path} mcp")
+        print()
+        print("2B. Claude Desktop — add this to claude_desktop_config.json:")
+        print()
+        print('     {')
+        print('       "mcpServers": {')
+        print('         "vamos": {')
+        print(f'           "command": "{vamos_path}",')
+        print('           "args": ["mcp"]')
+        print('         }')
+        print('       }')
+        print('     }')
+        print()
+        print("    Config locations:")
+        print("      macOS:   ~/Library/Application Support/Claude/claude_desktop_config.json")
+        print("      Windows: %APPDATA%\\Claude\\claude_desktop_config.json")
+        print()
+        print("3. Restart Claude. Try: 'use vamos to fetch ticket 12345'.")
+        return 0
+
+    print(f"Unknown mcp action: {action}")
     return 1
 
 

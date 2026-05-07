@@ -427,6 +427,45 @@ class ADOClient:
         _raise(resp)
         return WorkItem.from_api(resp.json())
 
+    def create_pr(
+        self,
+        repo: str,
+        source_branch: str,
+        target_branch: str,
+        title: str,
+        description: str = "",
+        work_item_ids: list[int] | None = None,
+        is_draft: bool = False,
+    ) -> dict[str, Any]:
+        """Create a pull request and (optionally) link work items to it.
+
+        Branch names may be passed bare ("feature/123-foo") or as full refs
+        ("refs/heads/feature/123-foo"); we normalize. Returns the raw PR
+        payload from ADO so callers can extract pullRequestId / URL.
+        """
+        self._guard_write()
+        body: dict[str, Any] = {
+            "sourceRefName": _as_ref(source_branch),
+            "targetRefName": _as_ref(target_branch),
+            "title": title,
+            "description": description,
+            "isDraft": is_draft,
+        }
+        if work_item_ids:
+            body["workItemRefs"] = [{"id": str(i)} for i in work_item_ids]
+        url = (
+            f"{self.base}/git/repositories/{quote(repo, safe='')}/pullrequests"
+            f"?api-version={API_VERSION}"
+        )
+        resp = self.session.post(
+            url,
+            json=body,
+            headers={"Content-Type": "application/json"},
+            timeout=self.timeout,
+        )
+        _raise(resp)
+        return resp.json()
+
     def link_work_items(
         self,
         source_id: int,
@@ -460,6 +499,11 @@ class ADOClient:
     def _guard_write(self) -> None:
         if self.read_only:
             raise ReadOnlyError("ADO_READ_ONLY=true blocks write operations")
+
+
+def _as_ref(branch: str) -> str:
+    """Normalize a branch name to refs/heads/<name> form expected by ADO."""
+    return branch if branch.startswith("refs/") else f"refs/heads/{branch}"
 
 
 def _path_clause(field: str, value: str | list[str] | None) -> str:
