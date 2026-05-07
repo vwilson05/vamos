@@ -7,6 +7,7 @@ webhook URL pattern.
 from __future__ import annotations
 
 import logging
+import re
 from urllib.parse import urlparse
 
 import requests
@@ -16,6 +17,28 @@ log = logging.getLogger(__name__)
 
 class SlackError(RuntimeError):
     pass
+
+
+# Workflow webhooks render variable text literally — no mrkdwn parsing — so
+# `*bold*`, `_italic_`, `<url|text>` show up as-is. Convert to plain text
+# (URLs in parens, bold/italic markers stripped) so the rendered message is
+# clean. Slack's URL auto-linker turns the bare URL into a clickable link.
+_MRKDWN_LINK = re.compile(r"<([^|>]+)\|([^>]+)>")
+_MRKDWN_BARE_URL = re.compile(r"<(https?://[^>]+)>")
+_MRKDWN_BOLD = re.compile(r"\*([^*\n]+)\*")
+_MRKDWN_ITALIC = re.compile(r"(?<![A-Za-z0-9_])_([^_\n]+)_(?![A-Za-z0-9_])")
+
+
+def mrkdwn_to_plain(text: str) -> str:
+    """Strip Slack mrkdwn so workflow-webhook messages render cleanly.
+
+    `<url|label>` -> `label (url)`, `<url>` -> `url`, `*x*` -> `x`, `_x_` -> `x`.
+    """
+    text = _MRKDWN_LINK.sub(lambda m: f"{m.group(2)} ({m.group(1)})", text)
+    text = _MRKDWN_BARE_URL.sub(lambda m: m.group(1), text)
+    text = _MRKDWN_BOLD.sub(r"\1", text)
+    text = _MRKDWN_ITALIC.sub(r"\1", text)
+    return text
 
 
 def post(webhook_url: str, text: str, title: str | None = None, timeout: int = 30) -> None:
@@ -41,15 +64,15 @@ def post(webhook_url: str, text: str, title: str | None = None, timeout: int = 3
 def _workflow_webhook(text: str, title: str | None) -> dict:
     """Workflow webhook format — simple JSON with text field.
 
-    Workflow webhooks (/triggers/) expect a simple payload.
-    Combine title and text into a single message.
+    Workflow webhooks (/triggers/) expect a simple payload AND render the
+    text literally (no mrkdwn). We strip mrkdwn so the message reads
+    cleanly when injected as a {{text}} variable in Workflow Builder.
     """
     if title:
-        message = f"*{title}*\n\n{text}"
+        message = f"{title}\n\n{text}"
     else:
         message = text
-
-    return {"text": message}
+    return {"text": mrkdwn_to_plain(message)}
 
 
 def _traditional_webhook(text: str, title: str | None) -> dict:

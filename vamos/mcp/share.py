@@ -65,32 +65,25 @@ def share(cfg: Config, text: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _ticket_link(cfg: Config, ticket_id: int) -> str:
-    """Return Slack mrkdwn link to a ticket — falls back to plain `#id`."""
-    if not ticket_id:
-        return ""
-    base = cfg.ado_org_url.rstrip("/")
-    project = cfg.ado_project
-    url = f"{base}/{project}/_workitems/edit/{ticket_id}"
-    return f"<{url}|#{ticket_id}>"
+def _ticket_label(cfg: Config, ticket_id: int) -> str:
+    """Bare ticket reference — workflow webhooks render mrkdwn links literally,
+    and the URL parenthetical was deemed noise in halo-nation. Just `#id`."""
+    return f"#{ticket_id}" if ticket_id else ""
 
 
-def _pr_link(cfg: Config, repo: str, pr_id: int) -> str:
-    base = cfg.ado_org_url.rstrip("/")
-    project = cfg.ado_project
-    url = f"{base}/{project}/_git/{repo}/pullrequest/{pr_id}"
-    return f"<{url}|PR #{pr_id}>"
+def _pr_label(cfg: Config, repo: str, pr_id: int) -> str:
+    return f"PR #{pr_id}"
 
 
 def started_work(cfg: Config, ticket_id: int, title: str | None = None) -> bool:
     title_part = f" — {title}" if title else ""
-    text = f"*{actor(cfg)}* started work on {_ticket_link(cfg, ticket_id)}{title_part} · {TAG}"
+    text = f"*{actor(cfg)}* started work on {_ticket_label(cfg, ticket_id)}{title_part} · {TAG}"
     return share(cfg, text)
 
 
 def opened_pr(cfg: Config, pr_id: int, repo: str, title: str | None = None) -> bool:
     title_part = f" — {title}" if title else ""
-    text = f"*{actor(cfg)}* opened {_pr_link(cfg, repo, pr_id)} in {repo}{title_part} · {TAG}"
+    text = f"*{actor(cfg)}* opened {_pr_label(cfg, repo, pr_id)} in {repo}{title_part} · {TAG}"
     return share(cfg, text)
 
 
@@ -100,7 +93,7 @@ def closed_ticket(
 ) -> bool:
     title_part = f" — {title}" if title else ""
     res_part = f" (resolved as {resolution})" if resolution else ""
-    text = f"*{actor(cfg)}* closed {_ticket_link(cfg, ticket_id)}{title_part}{res_part} · {TAG}"
+    text = f"*{actor(cfg)}* closed {_ticket_label(cfg, ticket_id)}{title_part}{res_part} · {TAG}"
     return share(cfg, text)
 
 
@@ -113,7 +106,7 @@ def voted_on_pr(cfg: Config, pr_id: int, repo: str, vote: str) -> bool:
         "no-vote": "cleared their vote on",
     }
     verb = verb_by_vote.get(vote, f"voted {vote} on")
-    text = f"*{actor(cfg)}* {verb} {_pr_link(cfg, repo, pr_id)} in {repo} · {TAG}"
+    text = f"*{actor(cfg)}* {verb} {_pr_label(cfg, repo, pr_id)} in {repo} · {TAG}"
     return share(cfg, text)
 
 
@@ -123,7 +116,7 @@ def ran_pr_review(
     if not posted:
         return False  # silent reviews shouldn't shout
     text = (
-        f"*{actor(cfg)}* ran an automated review on {_pr_link(cfg, repo, pr_id)} "
+        f"*{actor(cfg)}* ran an automated review on {_pr_label(cfg, repo, pr_id)} "
         f"in {repo} ({finding_count} finding(s) posted) · {TAG}"
     )
     return share(cfg, text)
@@ -140,9 +133,9 @@ def custom(
     """
     parts = [f"*{actor(cfg)}* — {action}", summary]
     if ticket_id:
-        parts.append(_ticket_link(cfg, ticket_id))
+        parts.append(_ticket_label(cfg, ticket_id))
     if pr_id and repo:
-        parts.append(_pr_link(cfg, repo, pr_id))
+        parts.append(_pr_label(cfg, repo, pr_id))
     text = "  ·  ".join(p for p in parts if p) + f" · {TAG}"
     return share(cfg, text)
 
