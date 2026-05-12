@@ -26,6 +26,7 @@ from . import brief as brief_mod
 from . import retro as retro_mod
 from . import at_risk as at_risk_mod
 from . import deps as deps_mod
+from . import reminders as reminders_mod
 from .pr_review import queue as pr_queue_mod
 from .core import boards as boards_mod
 from . import cron_install as cron_install_mod
@@ -172,6 +173,22 @@ def main(argv: list[str] | None = None) -> int:
                                     "(past target date, blocked P1s, aging items)")
     p_at_risk.add_argument("--skip-post", action="store_true",
                            help="Generate the at-risk report but do not post to Teams/Slack")
+
+    p_reminders = sub.add_parser(
+        "reminders",
+        help="Advisory board-wide reminders + recommendations "
+             "(workbook-sent close-outs, unpicked P1s, merged-but-open tickets, etc.). "
+             "Generates a preview and prompts before sending.",
+    )
+    p_reminders.add_argument("--skip-post", action="store_true",
+                             help="Generate the report only — never prompt, never post.")
+    p_reminders.add_argument("--send", action="store_true",
+                             help="Send to channel without an interactive prompt (for cron).")
+    p_reminders.add_argument("--channel", choices=["Slack", "Teams"], default=None,
+                             help="Override delivery channel (defaults to CONNECTION_OPTION).")
+    p_reminders.add_argument("--comment-tickets", action="store_true",
+                             help="Also post advisory comments on individual tickets "
+                                  "(requires HYGIENE_LIVE_MODE=true).")
 
     # --- PR review queue (extends pr-review subcommand) ---
     p_review_queue = sub.add_parser(
@@ -372,6 +389,45 @@ def main(argv: list[str] | None = None) -> int:
         print()
         print(report.to_markdown())
         return 0 if not report.has_blockers else 1
+
+    if args.cmd == "reminders":
+        # Generate without posting first — preview comes before the decision.
+        report = reminders_mod.run(
+            cfg,
+            skip_post=True,
+            comment_tickets=args.comment_tickets,
+            channel=args.channel,
+            day=day,
+        )
+        print()
+        print(report.to_markdown())
+        print()
+
+        if args.skip_post:
+            print("--skip-post set: report generated, not delivered.")
+            return 0
+
+        if not report.findings:
+            print("No findings — nothing to send.")
+            return 0
+
+        target = args.channel or cfg.connection_option
+        if args.send:
+            do_send = True
+        else:
+            try:
+                answer = input(f"Send to {target}? [y/N] ").strip().lower()
+            except EOFError:
+                answer = ""
+            do_send = answer in ("y", "yes")
+
+        if do_send:
+            from .core import delivery as _delivery
+            _delivery.post_report(cfg, report, prefer=args.channel)
+            print(f"Sent to {target}.")
+        else:
+            print("Skipped sending. Report saved to state/reminders/.")
+        return 0
 
     if args.cmd == "review-queue":
         if args.load:

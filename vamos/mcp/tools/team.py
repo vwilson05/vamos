@@ -21,6 +21,7 @@ from ... import brief as brief_mod
 from ... import deps as deps_mod
 from ... import healthcheck as healthcheck_mod
 from ... import hygiene as hygiene_mod
+from ... import reminders as reminders_mod
 from ... import retro as retro_mod
 from ...ado import ADOClient
 from ...pr_review import queue as pr_queue_mod
@@ -185,6 +186,60 @@ def get_team_healthcheck() -> dict[str, Any]:
     ctx = get_ctx()
     text = healthcheck_mod.run(ctx.cfg, skip_post=True, day=_today())
     return {"day": _today().isoformat(), "markdown": text}
+
+
+def get_reminders() -> dict[str, Any]:
+    """Generate the board-wide reminders report.
+
+    Read-only — never posts to Teams/Slack and never comments on tickets.
+    Use to preview what reminders would go out; call `send_reminders` with
+    confirm=True to actually deliver.
+    """
+    ctx = get_ctx()
+    report = reminders_mod.run(
+        ctx.cfg, skip_post=True, comment_tickets=False, day=_today(),
+    )
+    return report_to_dict(report)
+
+
+def send_reminders(
+    channel: str | None = None,
+    comment_tickets: bool = False,
+    confirm: bool = False,
+) -> dict[str, Any]:
+    """Generate AND deliver the reminders report to the team channel.
+
+    SAFETY: returns a dry-run preview unless confirm=True. Always show the
+    preview to a human before re-calling with confirm=True.
+
+    `channel`: "Slack" or "Teams" (defaults to cfg.connection_option).
+    `comment_tickets`: also post advisory comments on individual tickets.
+        Requires HYGIENE_LIVE_MODE=true.
+    """
+    ctx = get_ctx()
+    if not confirm:
+        report = reminders_mod.run(
+            ctx.cfg, skip_post=True, comment_tickets=False, day=_today(),
+        )
+        data = report_to_dict(report)
+        data["preview"] = True
+        data["next_action"] = (
+            "Re-call send_reminders with confirm=True to deliver to "
+            f"{channel or ctx.cfg.connection_option}."
+        )
+        return data
+
+    report = reminders_mod.run(
+        ctx.cfg,
+        skip_post=False,
+        comment_tickets=comment_tickets,
+        channel=channel,
+        day=_today(),
+    )
+    data = report_to_dict(report)
+    data["posted"] = True
+    data["channel"] = channel or ctx.cfg.connection_option
+    return data
 
 
 def run_metrics(format: str = "markdown") -> dict[str, Any]:
