@@ -1,0 +1,189 @@
+{
+  "title": "Board Reminders \u2014 Tuesday, May 12, 2026",
+  "subtitle": "Advisory recommendations across the board",
+  "area_path": "Data Platform\\\\Engineering",
+  "iteration_path": "Data Platform\\\\Ingestion Engineering Kanban",
+  "generated_at": "2026-05-12T09:20:08.023891",
+  "findings": [
+    {
+      "rule_id": "workbook-sent-but-open",
+      "severity": "should-fix",
+      "message": "Workbook appears sent on 2026-05-11 \u2014 consider closing this ticket. Open a new one for any follow-up work.",
+      "engineer": "daniel.calderon@halomd.com",
+      "ticket_id": 30059,
+      "ticket_url": "https://dev.azure.com/HaloMDLLC/a81ff7aa-29f5-4b4a-b841-24fce7add66d/_workitems/edit/30059",
+      "ticket_title": "Sooner Care - Engineer Makes Exclusion Rule Change in Dev, Generates QA Workbook, and Assesses Arbit Pullback Need",
+      "suggested_comment": "Heads up \u2014 looks like the QA workbook was sent. Per board standards, close this ticket once the workbook is delivered; open a new ticket if BA feedback requires additional changes.",
+      "extra": {}
+    },
+    {
+      "rule_id": "active-overload",
+      "severity": "info",
+      "message": "17 tickets in Active state (#30610, #30600, #30615, #30601, #30602 (+12 more)). Consider keeping just one in Active \u2014 move the rest to Blocked or back to To Do.",
+      "engineer": "Christy.Kooiman@halomd.com",
+      "ticket_id": null,
+      "ticket_url": null,
+      "ticket_title": null,
+      "suggested_comment": null,
+      "extra": {}
+    },
+    {
+      "rule_id": "active-overload",
+      "severity": "info",
+      "message": "4 tickets in Active state (#17511, #17649, #17650, #20215). Consider keeping just one in Active \u2014 move the rest to Blocked or back to To Do.",
+      "engineer": "Daniel.Heinmiller@halomd.com",
+      "ticket_id": null,
+      "ticket_url": null,
+      "ticket_title": null,
+      "suggested_comment": null,
+      "extra": {}
+    },
+    {
+      "rule_id": "active-overload",
+      "severity": "info",
+      "message": "3 tickets in Active state (#17647, #16776, #5118). Consider keeping just one in Active \u2014 move the rest to Blocked or back to To Do.",
+      "engineer": "Erin.Davidson@halomd.com",
+      "ticket_id": null,
+      "ticket_url": null,
+      "ticket_title": null,
+      "suggested_comment": null,
+      "extra": {}
+    },
+    {
+      "rule_id": "active-overload",
+      "severity": "info",
+      "message": "4 tickets in Active state (#31125, #31315, #30836, #28948). Consider keeping just one in Active \u2014 move the rest to Blocked or back to To Do.",
+      "engineer": "Gerson.Espinoza@halomd.com",
+      "ticket_id": null,
+      "ticket_url": null,
+      "ticket_title": null,
+      "suggested_comment": null,
+      "extra": {}
+    },
+    {
+      "rule_id": "active-overload",
+      "severity": "info",
+      "message": "4 tickets in Active state (#31377, #28855, #26013, #29263). Consider keeping just one in Active \u2014 move the rest to Blocked or back to To Do.",
+      "engineer": "jimmycalvo.monge@halomd.com",
+      "ticket_id": null,
+      "ticket_url": null,
+      "ticket_title": null,
+      "suggested_comment": null,
+      "extra": {}
+    },
+    {
+      "rule_id": "active-overload",
+      "severity": "info",
+      "message": "2 tickets in Active state (#28616, #25919). Consider keeping just one in Active \u2014 move the rest to Blocked or back to To Do.",
+      "engineer": "Jon.Galvan@halomd.com",
+      "ticket_id": null,
+      "ticket_url": null,
+      "ticket_title": null,
+      "suggested_comment": null,
+      "extra": {}
+    },
+    {
+      "rule_id": "target-date-approaching",
+      "severity": "should-fix",
+      "message": "Target date 2026-05-12 (~0d away), no progress comment in the last 2 days. Quick status update?",
+      "engineer": "Gerson.Espinoza@halomd.com",
+      "ticket_id": 28948,
+      "ticket_url": "https://dev.azure.com/HaloMDLLC/a81ff7aa-29f5-4b4a-b841-24fce7add66d/_workitems/edit/28948",
+      "ticket_title": "Lancaster Physicians - Push to Production",
+      "suggested_comment": "Target date is 2026-05-12 \u2014 please drop a quick status (progress, blockers, ETA) so we know where this stands.",
+      "extra": {}
+    },
+    {
+      "rule_id": "target-date-approaching",
+      "severity": "should-fix",
+      "message": "Target date 2026-05-14 (~2d away), no progress comment in the last 2 days. Quick status update?",
+      "engineer": "Harshit.Tripathi@halomd.com",
+      "ticket_id": 31435,
+      "ticket_url": "https://dev.azure.com/HaloMDLLC/a81ff7aa-29f5-4b4a-b841-24fce7add66d/_workitems/edit/31435",
+      "ticket_title": "Specialty of TN \u2014 Generate Full Claims Report (Included & Excluded) with Payor Column",
+      "suggested_comment": "Target date is 2026-05-14 \u2014 please drop a quick status (progress, blockers, ETA) so we know where this stands.",
+      "extra": {}
+    },
+    {
+      "rule_id": "no-target-date-on-p1",
+      "severity": "should-fix",
+      "message": "P1 in Active with no target date. Set one so leadership can track it.",
+      "engineer": "Christy.Kooiman@halomd.com",
+      "ticket_id": 30610,
+      "ticket_url": "https://dev.azure.com/HaloMDLLC/a81ff7aa-29f5-4b4a-b841-24fce7add66d/_workitems/edit/30610",
+      "ticket_title": "MEMS - Cigna - Date based update for OON claims",
+      "suggested_comment": "P1 tickets should have a target date set. Please add one (start date + target date, per board standards).",
+      "extra": {}
+    },
+    {
+      "rule_id": "no-target-date-on-p1",
+      "severity": "should-fix",
+      "message": "P1 in Active with no target date. Set one so leadership can track it.",
+      "engineer": "Christy.Kooiman@halomd.com",
+      "ticket_id": 30600,
+      "ticket_url": "https://dev.azure.com/HaloMDLLC/a81ff7aa-29f5-4b4a-b841-24fce7add66d/_workitems/edit/30600",
+      "ticket_title": "Titans of Halo Additional Prov Inclusions & Reporting",
+      "suggested_comment": "P1 tickets should have a target date set. Please add one (start date + target date, per board standards).",
+      "extra": {}
+    },
+    {
+      "rule_id": "no-target-date-on-p1",
+      "severity": "should-fix",
+      "message": "P1 in Active with no target date. Set one so leadership can track it.",
+      "engineer": "Christy.Kooiman@halomd.com",
+      "ticket_id": 30615,
+      "ticket_url": "https://dev.azure.com/HaloMDLLC/a81ff7aa-29f5-4b4a-b841-24fce7add66d/_workitems/edit/30615",
+      "ticket_title": "Global Anesthesia Exclusion Rule",
+      "suggested_comment": "P1 tickets should have a target date set. Please add one (start date + target date, per board standards).",
+      "extra": {}
+    },
+    {
+      "rule_id": "no-target-date-on-p1",
+      "severity": "should-fix",
+      "message": "P1 in Active with no target date. Set one so leadership can track it.",
+      "engineer": "Gerson.Espinoza@halomd.com",
+      "ticket_id": 31125,
+      "ticket_url": "https://dev.azure.com/HaloMDLLC/a81ff7aa-29f5-4b4a-b841-24fce7add66d/_workitems/edit/31125",
+      "ticket_title": "V2 Pipeline \u2014 Ingest Missing Files & Add ZotecData Folder for UVEP, EMSOC & Other Affected Clients",
+      "suggested_comment": "P1 tickets should have a target date set. Please add one (start date + target date, per board standards).",
+      "extra": {}
+    },
+    {
+      "rule_id": "handoff-silent",
+      "severity": "info",
+      "message": "Recently assigned/changed (2026-05-12) but no comment yet from the assignee. Acknowledge the handoff?",
+      "engineer": "Gerson.Espinoza@halomd.com",
+      "ticket_id": 28948,
+      "ticket_url": "https://dev.azure.com/HaloMDLLC/a81ff7aa-29f5-4b4a-b841-24fce7add66d/_workitems/edit/28948",
+      "ticket_title": "Lancaster Physicians - Push to Production",
+      "suggested_comment": "Heads up \u2014 you're newly on this ticket. Drop a quick comment to acknowledge the handoff and plan next steps.",
+      "extra": {}
+    },
+    {
+      "rule_id": "handoff-silent",
+      "severity": "info",
+      "message": "Recently assigned/changed (2026-05-12) but no comment yet from the assignee. Acknowledge the handoff?",
+      "engineer": "Harshit.Tripathi@halomd.com",
+      "ticket_id": 31435,
+      "ticket_url": "https://dev.azure.com/HaloMDLLC/a81ff7aa-29f5-4b4a-b841-24fce7add66d/_workitems/edit/31435",
+      "ticket_title": "Specialty of TN \u2014 Generate Full Claims Report (Included & Excluded) with Payor Column",
+      "suggested_comment": "Heads up \u2014 you're newly on this ticket. Drop a quick comment to acknowledge the handoff and plan next steps.",
+      "extra": {}
+    },
+    {
+      "rule_id": "customer-onboarding-stalled",
+      "severity": "should-fix",
+      "message": "Customer Onboarding ticket in Blocked for 21d with no recent owner comment. BA / CS may be waiting \u2014 status update?",
+      "engineer": null,
+      "ticket_id": 24635,
+      "ticket_url": "https://dev.azure.com/HaloMDLLC/a81ff7aa-29f5-4b4a-b841-24fce7add66d/_workitems/edit/24635",
+      "ticket_title": "Anesthesia Consultants of Augusta - Develop Models and Generate QA Workbook",
+      "suggested_comment": "This onboarding ticket has been quiet for a while. Please post a status update \u2014 BA and CS are tracking this.",
+      "extra": {}
+    }
+  ],
+  "summary": {
+    "should-fix": 8,
+    "info": 8
+  }
+}
