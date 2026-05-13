@@ -463,6 +463,44 @@ def share_success_story(
 
 
 @mcp.tool()
+def get_reminders() -> dict[str, Any]:
+    """Generate board-wide advisory reminders + recommendations.
+
+    Read-only — never posts to Teams/Slack and never comments on tickets.
+    Returns the full Report (findings + counts + markdown render). Use to
+    preview reminders before deciding to send.
+
+    Surfaces things like: workbook-sent tickets that should be closed,
+    P1s sitting unclaimed in To Do, PRs merged but tickets still Active,
+    engineers with >1 Active ticket, target dates approaching without
+    progress comments, P1s missing target dates, silent handoffs, and
+    stalled customer-onboarding tickets.
+    """
+    return ticket_ools_safe(team_tools.get_reminders)
+
+
+@mcp.tool()
+def send_reminders(
+    channel: str | None = None,
+    comment_tickets: bool = False,
+    confirm: bool = False,
+) -> dict[str, Any]:
+    """Generate AND deliver the reminders report to the team channel.
+
+    SAFETY: returns a dry-run preview unless confirm=True. Always show the
+    preview to a human before re-calling with confirm=True.
+
+    `channel`: "Slack" or "Teams" (defaults to CONNECTION_OPTION).
+    `comment_tickets`: additionally post per-engineer advisory comments
+        on the offending tickets. Requires HYGIENE_LIVE_MODE=true.
+    """
+    return ticket_ools_safe(
+        team_tools.send_reminders,
+        channel=channel, comment_tickets=comment_tickets, confirm=confirm,
+    )
+
+
+@mcp.tool()
 def run_metrics(format: str = "markdown") -> dict[str, Any]:
     """Generate the board metrics report — backlog / throughput / cycle time.
 

@@ -94,6 +94,7 @@ All commands accept `-v` / `--verbose` and `--profile {personal,team}`.
 | `vamos hygiene --clean` | Walk findings, propose AI-generated fixes, prompt y/n per item. |
 | `vamos hygiene --clean --apply` | Auto-apply fixes (gated by `HYGIENE_LIVE_MODE=true`). |
 | `vamos at-risk` | Past-target / blocked P1s / aging items + aging PRs. |
+| `vamos reminders` | Advisory board-wide reminders (workbook-sent close-outs, unpicked P1s, merged-but-open tickets, etc.). Prompts before sending. |
 
 **Engineer tools**
 
@@ -212,6 +213,8 @@ Restart Claude. Try: *"use vamos to fetch ticket 12345"*.
 | `get_at_risk()` | Past-target / blocked P1s / aging items + aging PRs. |
 | `get_team_hygiene()` | Full-board hygiene rollup. |
 | `get_team_healthcheck()` | Per-engineer team-wide ticket snapshot. |
+| `get_reminders()` | Board-wide advisory reminders + recommendations (read-only). |
+| `send_reminders(confirm=True)` | Deliver the reminders report to the team channel (preview-first). |
 | `run_metrics(format='markdown')` | Backlog / throughput / cycle time report. |
 
 Every ticket-shaped response carries `next_actions` derived live from ADO state — Claude doesn't have to remember where it is in the flow. Every write tool appends to `state/trail/<ticket>.jsonl` so you have an audit record of which actions came from a human, the CLI, or Claude.
