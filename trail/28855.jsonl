@@ -1,1 +1,0 @@
-{"ts": "2026-05-07T17:10:57.136021+00:00", "actor": "claude", "tool": "run_pr_review", "args": {"pr_id": 8639, "repo": "dbt-halomd"}, "result": {"verdict": "approve-with-suggestions", "finding_count": 4, "posted": false}}
